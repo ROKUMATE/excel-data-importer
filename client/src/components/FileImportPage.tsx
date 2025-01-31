@@ -13,6 +13,7 @@ const FileImportPage: React.FC = () => {
     const [sheetData, setSheetData] = useState<{ [key: string]: any[] }>({});
     const [activeSheet, setActiveSheet] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showDataEntries, setShowDataEntries] = useState(false);
 
     const handleFileChange = async (
         event: React.ChangeEvent<HTMLInputElement>
@@ -36,40 +37,16 @@ const FileImportPage: React.FC = () => {
         }
     };
 
-    const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
-        event.preventDefault();
-        const selectedFile = event.dataTransfer.files[0];
-        if (selectedFile) {
-            if (
-                selectedFile.type !==
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            ) {
-                setError('Only .xlsx files are allowed.');
-                setFile(null);
-            } else if (selectedFile.size > 2 * 1024 * 1024) {
-                setError('File size must be less than 2 MB.');
-                setFile(null);
-            } else {
-                setError(null);
-                setFile(selectedFile);
-                await uploadFileToBackend(selectedFile);
-            }
-        }
-    };
-
     const uploadFileToBackend = async (file: File) => {
-        console.log(file);
         setIsLoading(true);
         const formData = new FormData();
         formData.append('file', file, file.name);
 
         try {
-            console.log(formData);
             const response = await fetch('http://localhost:3000/upload', {
                 method: 'POST',
                 body: formData,
             });
-            console.log(response);
 
             if (!response.ok) {
                 throw new Error(`Error: ${response.statusText}`);
@@ -80,9 +57,9 @@ const FileImportPage: React.FC = () => {
             // Update state with data from backend
             setSheetData(data.sheets || {});
             setActiveSheet(Object.keys(data.sheets || {})[0] || '');
-            setValidationErrors(data.validationErrors || []);
-            if (data.validationErrors?.length > 0) {
-                setActiveTab(data.validationErrors[0].sheetName);
+            setValidationErrors(data.errors || []);
+            if (data.errors?.length > 0) {
+                setActiveTab(data.errors[0].sheetName);
                 setIsModalOpen(true);
             }
         } catch (err) {
@@ -93,36 +70,16 @@ const FileImportPage: React.FC = () => {
         }
     };
 
-    const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-        event.preventDefault();
-    };
-
-    const handleDeleteRow = (sheetName: string, rowId: number) => {
-        if (window.confirm('Are you sure you want to delete this row?')) {
-            setSheetData((prevData) => ({
-                ...prevData,
-                [sheetName]: prevData[sheetName].filter(
-                    (row: any) => row.id !== rowId
-                ),
-            }));
-        }
+    const toggleDataEntries = () => {
+        setShowDataEntries((prev) => !prev);
     };
 
     return (
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
-            {/* File Upload Card */}
             <div className="p-8 w-full max-w-lg bg-gray-800 rounded-2xl shadow-xl">
                 <h2 className="text-3xl font-bold mb-6 text-center text-gray-100">
                     Upload Your File
                 </h2>
-                <div
-                    className="border-2 border-dashed border-gray-600 p-6 rounded-lg mb-6 cursor-pointer hover:border-gray-500 hover:bg-gray-700 transition"
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}>
-                    <p className="text-center text-gray-300">
-                        Drag and drop your .xlsx file here
-                    </p>
-                </div>
                 <input
                     type="file"
                     accept=".xlsx"
@@ -152,23 +109,23 @@ const FileImportPage: React.FC = () => {
                     Validation Errors
                 </h2>
                 <div className="flex mb-6 overflow-x-auto">
-                    {validationErrors.map((sheet) => (
+                    {validationErrors.map((error) => (
                         <button
-                            key={sheet.sheetName}
+                            key={error.sheetName}
                             className={`px-4 py-2 mr-2 rounded-lg font-semibold ${
-                                activeTab === sheet.sheetName
+                                activeTab === error.sheetName
                                     ? 'bg-gray-700 text-white'
                                     : 'bg-gray-600 text-gray-300'
                             } hover:bg-gray-700 transition`}
-                            onClick={() => setActiveTab(sheet.sheetName)}>
-                            {sheet.sheetName}
+                            onClick={() => setActiveTab(error.sheetName)}>
+                            {error.sheetName}
                         </button>
                     ))}
                 </div>
                 <div className="max-h-60 overflow-y-auto text-gray-300">
                     {validationErrors
-                        .find((sheet) => sheet.sheetName === activeTab)
-                        ?.errors.map(
+                        .filter((error) => error.sheetName === activeTab)
+                        .map(
                             (
                                 error: {
                                     rowNumber: number;
@@ -191,56 +148,58 @@ const FileImportPage: React.FC = () => {
 
             {/* Data Table */}
             <div className="mt-10 w-full max-w-4xl">
-                <select
-                    value={activeSheet}
-                    onChange={(e) => setActiveSheet(e.target.value)}
-                    className="mb-4 p-3 bg-gray-700 text-white rounded-lg shadow focus:ring-2 focus:ring-blue-500">
-                    {Object.keys(sheetData).map((sheetName) => (
-                        <option key={sheetName} value={sheetName}>
-                            {sheetName}
-                        </option>
-                    ))}
-                </select>
+                <button
+                    onClick={toggleDataEntries}
+                    className="mb-4 px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition">
+                    {showDataEntries
+                        ? 'Hide Data Entries'
+                        : 'Show Data Entries'}
+                </button>
 
-                <div className="overflow-x-auto bg-gray-800 rounded-lg shadow-lg">
-                    <table className="table-auto w-full text-left">
-                        <thead className="bg-gray-700 text-gray-300 uppercase">
-                            <tr>
-                                <th className="p-4">Name</th>
-                                <th className="p-4">Date</th>
-                                <th className="p-4">Amount</th>
-                                <th className="p-4">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sheetData[activeSheet]?.map((row) => (
-                                <tr
-                                    key={row.id}
-                                    className="border-t border-gray-700 hover:bg-gray-700 transition">
-                                    <td className="p-4">{row.name}</td>
-                                    <td className="p-4">
-                                        {format(
-                                            new Date(row.date),
-                                            'dd-MM-yyyy'
-                                        )}
-                                    </td>
-                                    <td className="p-4">
-                                        <button
-                                            onClick={() =>
-                                                handleDeleteRow(
-                                                    activeSheet,
-                                                    row.id
-                                                )
-                                            }
-                                            className="text-red-500 hover:text-red-400 transition">
-                                            Delete
-                                        </button>
-                                    </td>
-                                </tr>
+                {showDataEntries && (
+                    <>
+                        <select
+                            value={activeSheet}
+                            onChange={(e) => setActiveSheet(e.target.value)}
+                            className="mb-4 p-3 bg-gray-700 text-white rounded-lg shadow focus:ring-2 focus:ring-blue-500">
+                            {Object.keys(sheetData).map((sheetName) => (
+                                <option key={sheetName} value={sheetName}>
+                                    {sheetName}
+                                </option>
                             ))}
-                        </tbody>
-                    </table>
-                </div>
+                        </select>
+
+                        <div className="overflow-x-auto bg-gray-800 rounded-lg shadow-lg">
+                            <table className="table-auto w-full text-left">
+                                <thead className="bg-gray-700 text-gray-300 uppercase">
+                                    <tr>
+                                        <th className="p-4">Name</th>
+                                        <th className="p-4">Date</th>
+                                        <th className="p-4">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sheetData[activeSheet]?.map((row) => (
+                                        <tr
+                                            key={row.id}
+                                            className="border-t border-gray-700 hover:bg-gray-700 transition">
+                                            <td className="p-4">{row.name}</td>
+                                            <td className="p-4">
+                                                {format(
+                                                    new Date(row.date),
+                                                    'dd-MM-yyyy'
+                                                )}
+                                            </td>
+                                            <td className="p-4">
+                                                {row.amount}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
