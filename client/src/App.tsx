@@ -1,10 +1,12 @@
+// import React from "react";
 import './App.css';
+import FileImportPage from './components/FileImportPage';
 
 function App() {
     return (
-        <>
-            <p className="">Hello there</p>
-        </>
+        <div className="dark w-full h-full">
+            <FileImportPage />
+        </div>
     );
 }
 
