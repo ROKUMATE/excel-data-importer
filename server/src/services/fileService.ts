@@ -1,8 +1,7 @@
 import ExcelJS from 'exceljs';
 import moment from 'moment';
-// import { insertData } from './databaseService';
+import DataRow from '../models/dataRows.model'; // Import the model
 
-// Interface import
 import { validationConfig } from '../config/validationConfig';
 import { ValidationError } from '../config/validationErrorConfig';
 
@@ -16,10 +15,10 @@ export const processFile = async (
     const errors: ValidationError[] = [];
     const importedData: Record<string, any[]> = {}; // Store data for insertion
     const currentMonth = moment().format('MM-YYYY');
+    // console.log('here');
 
-    // console.log(workbook);
     workbook.eachSheet((sheet) => {
-        // console.log(sheet);
+        // console.log('here');
         const config =
             validationConfig.sheets[sheet.name] ||
             validationConfig.sheets.default;
@@ -51,13 +50,11 @@ export const processFile = async (
 
             if (row.values) {
                 const rowData: Record<string, any> = {};
-                Object.entries(columnMap).forEach(
-                    ([excelCol, dbField], index) => {
-                        rowData[dbField] = (row.values as ExcelJS.CellValue[])[
-                            index + 1
-                        ];
-                    }
-                );
+                Object.entries(columnMap).forEach(([, dbField], index) => {
+                    rowData[dbField] = (row.values as ExcelJS.CellValue[])[
+                        index + 1
+                    ];
+                });
 
                 let hasError = false;
 
@@ -113,7 +110,9 @@ export const processFile = async (
                 }
 
                 // Add valid row to sheetData
+
                 if (!hasError) {
+                    console.log('here');
                     sheetData.push(rowData);
                 }
             }
@@ -126,18 +125,31 @@ export const processFile = async (
     });
 
     // Insert valid data into MongoDB
-    // for (const [sheetName, data] of Object.entries(importedData)) {
-    //     await insertData(sheetName.toLowerCase(), data); // Use sheet name as collection name
-    // }
+    // console.log(importedData);
+    for (const [sheetName, data] of Object.entries(importedData)) {
+        try {
+            console.log(sheetName.toLocaleLowerCase(), data);
+            await insertData(sheetName.toLowerCase(), data); // Use sheet name as collection name
+        } catch (error) {
+            console.log(sheetName.toLocaleLowerCase(), data);
+            console.error(
+                `Failed to insert data for sheet ${sheetName}:`,
+                error
+            );
+        }
+    }
 
     return errors;
 };
 
-// Function to check a local file for validation (for `/check-endpoint`)
-export const checkFile = async (): Promise<ValidationError[]> => {
-    const filePath = '../sample_files/example_validation_file.xlsx';
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filePath);
-    // @ts-ignore
-    return processFile(await workbook.xlsx.writeBuffer());
+// Insert data into MongoDB
+const insertData = async (sheetName: string, data: any[]) => {
+    try {
+        if (data.length > 0) {
+            await DataRow.insertMany(data); // Insert the rows into MongoDB
+            console.log(`Inserted data from sheet: ${sheetName}`);
+        }
+    } catch (error) {
+        console.error(`Error inserting data from sheet ${sheetName}:`, error);
+    }
 };
