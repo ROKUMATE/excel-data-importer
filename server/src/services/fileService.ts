@@ -15,10 +15,8 @@ export const processFile = async (
     const errors: ValidationError[] = [];
     const importedData: Record<string, any[]> = {}; // Store data for insertion
     const currentMonth = moment().format('MM-YYYY');
-    // console.log('here');
 
     workbook.eachSheet((sheet) => {
-        // console.log('here');
         const config =
             validationConfig.sheets[sheet.name] ||
             validationConfig.sheets.default;
@@ -112,7 +110,6 @@ export const processFile = async (
                 // Add valid row to sheetData
 
                 if (!hasError) {
-                    console.log('here');
                     sheetData.push(rowData);
                 }
             }
@@ -125,13 +122,10 @@ export const processFile = async (
     });
 
     // Insert valid data into MongoDB
-    // console.log(importedData);
     for (const [sheetName, data] of Object.entries(importedData)) {
         try {
-            console.log(sheetName.toLocaleLowerCase(), data);
             await insertData(sheetName.toLowerCase(), data); // Use sheet name as collection name
         } catch (error) {
-            console.log(sheetName.toLocaleLowerCase(), data);
             console.error(
                 `Failed to insert data for sheet ${sheetName}:`,
                 error
@@ -145,9 +139,14 @@ export const processFile = async (
 // Insert data into MongoDB
 const insertData = async (sheetName: string, data: any[]) => {
     try {
-        if (data.length > 0) {
-            await DataRow.insertMany(data); // Insert the rows into MongoDB
-            console.log(`Inserted data from sheet: ${sheetName}`);
+        for (const row of data) {
+            const existingEntry = await DataRow.findOne(row);
+            if (!existingEntry) {
+                await DataRow.create(row); // Insert the row into MongoDB
+                console.log(`Inserted data from sheet: ${sheetName}`);
+            } else {
+                console.log(`Duplicate entry found for sheet: ${sheetName}`);
+            }
         }
     } catch (error) {
         console.error(`Error inserting data from sheet ${sheetName}:`, error);
