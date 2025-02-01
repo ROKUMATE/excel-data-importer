@@ -1,50 +1,92 @@
-# React + TypeScript + Vite
+# Frontend - Excel to Mongo Data Converter
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend provides an intuitive interface for users to upload Excel files, preview data, handle errors, and manage data import into MongoDB.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 1. File Import Page
 
-## Expanding the ESLint configuration
+-   **Drag-and-Drop Upload:**
+    -   Users can drag and drop Excel files (.xlsx) for upload.
+    -   A fallback file input button is available for users who prefer a traditional upload method.
+-   **File Restrictions:**
+    -   Only accepts `.xlsx` files.
+    -   Enforces a maximum file size of 2 MB.
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+### 2. Error Display
 
-- Configure the top-level `parserOptions` property like this:
+-   Displays backend validation errors in a **modal dialog**:
+    -   Errors include the row number and a description for each invalid row.
+-   **Multi-Sheet Error Handling:**
+    -   For files with multiple sheets, errors are displayed in separate tabs for each sheet.
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### 3. Data Preview
+
+-   **Sheet Selection:**
+    -   A dropdown lists all the sheets in the uploaded file.
+    -   Users can select a sheet to preview its data.
+-   **Paginated Table Display:**
+    -   Displays the selected sheet's data in a paginated table.
+    -   Formats dates to `DD-MM-YYYY`.
+    -   Formats numeric values using the **Indian numbering format** (e.g., 12,34,456.00).
+-   **Row Deletion:**
+    -   Each row has a delete icon.
+    -   Clicking the delete icon prompts a confirmation dialog.
+    -   Rows are deleted only after user confirmation.
+
+### 4. Data Import
+
+-   **Import Button:**
+    -   Allows users to import all valid rows into the database.
+    -   Skips invalid rows automatically.
+-   **Feedback Mechanism:**
+    -   Displays a success message upon successful import.
+    -   Highlights skipped rows for user reference.
+
+## Prerequisites
+
+-   A running backend server for file upload and validation.
+-   Node.js and npm installed on your system.
+
+## How to Run the Frontend
+
+### Step 1: Install Dependencies
+
+Navigate to the `client` directory and install the required dependencies:
+
+```bash
+npm install
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### Step 2: Configure Environment Variables
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+Create a `.env` file in the `client` directory and add the backend URL:
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```env
+REACT_APP_BACKEND_URL=http://localhost:5000
 ```
+
+### Step 3: Start the Frontend
+
+Run the development server:
+
+```bash
+npm run dev
+```
+
+The application will start at `http://localhost:5173` by default.
+
+## Technologies Used
+
+-   **Frontend Framework:** React
+-   **Styling:** CSS or a preferred CSS-in-JS solution
+-   **Date Formatting:** `date-fns` or similar library
+-   **Number Formatting:** Custom formatter for Indian number system
+
+## Contributing
+
+Contributions are welcome! Ensure that any new features align with the current design and functionality.
+
+## License
+
+This frontend code is licensed under the MIT License.
